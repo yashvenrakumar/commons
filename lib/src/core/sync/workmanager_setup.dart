@@ -4,6 +4,7 @@ import 'sync_service.dart';
 import '../system/connectivity_service.dart';
 
 const String kSyncTaskName = 'sync_offline_data';
+const String kSyncUniqueTaskName = 'sync_offline_data_unique';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -40,10 +41,10 @@ class WorkmanagerSetup {
 
   Future<void> scheduleOneOffSync() async {
     await Workmanager().registerOneOffTask(
-      'sync-${DateTime.now().millisecondsSinceEpoch}',
+      kSyncUniqueTaskName,
       kSyncTaskName,
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.append,
+      existingWorkPolicy: ExistingWorkPolicy.keep,
       backoffPolicy: BackoffPolicy.exponential,
       backoffPolicyDelay: const Duration(minutes: 5),
     );

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/db/app_database.dart';
@@ -18,7 +18,9 @@ class MovieListController extends ChangeNotifier {
             ? initialQuery!.trim()
             : AppConstants.defaultMovieSearchQuery {
     _bookmarksSub = _repo.watchBookmarks(_userLocalId).listen((rows) {
-      _bookmarkedIds = rows.map((e) => e.imdbId).toSet();
+      final next = rows.map((e) => e.imdbId).toSet();
+      if (setEquals(_bookmarkedIds, next)) return;
+      _bookmarkedIds = next;
       notifyListeners();
     });
   }

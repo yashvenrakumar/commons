@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,6 +33,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
     super.initState();
     _controller = MovieListController(repo: sl(), userLocalId: widget.userLocalId)
       ..refresh();
+    _search.text = _controller.query;
     _scroll = ScrollController()
       ..addListener(() {
         if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 400) {
@@ -52,7 +56,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
       child: Builder(
         builder: (context) {
           final c = context.watch<MovieListController>();
-          _search.value = _search.value.copyWith(text: c.query);
+          final cs = Theme.of(context).colorScheme;
           return Scaffold(
             appBar: AppBar(
               title: Text('Movies • ${widget.userName}'),
@@ -60,27 +64,38 @@ class _MovieListScreenState extends State<MovieListScreen> {
             body: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _search,
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: (v) => c.setQuery(v),
-                          decoration: const InputDecoration(
-                            hintText: 'Search movies (OMDb)',
-                            prefixIcon: Icon(Icons.search),
-                          ),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: cs.surface.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CupertinoSearchTextField(
+                                controller: _search,
+                                onSubmitted: (v) => c.setQuery(v),
+                                placeholder: 'Search movies',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CupertinoButton(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: Size.zero,
+                              onPressed: () => c.setQuery(_search.text),
+                              child: const Icon(CupertinoIcons.search),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      IconButton(
-                        onPressed: () => c.setQuery(_search.text),
-                        icon: const Icon(Icons.arrow_forward),
-                        tooltip: 'Search',
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 if (c.reconnecting)
@@ -94,14 +109,13 @@ class _MovieListScreenState extends State<MovieListScreen> {
                     child: ListView.builder(
                       controller: _scroll,
                       itemCount: c.items.length + 1,
+                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
                       itemBuilder: (context, i) {
                         if (i == c.items.length) {
                           if (c.loading) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: CircularProgressIndicator.adaptive(),
-                              ),
+                              child: Center(child: CircularProgressIndicator.adaptive()),
                             );
                           }
                           if (c.error != null) {
@@ -109,9 +123,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                               child: Text(
                                 c.error!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
+                                style: TextStyle(color: Theme.of(context).colorScheme.error),
                               ),
                             );
                           }
@@ -119,8 +131,8 @@ class _MovieListScreenState extends State<MovieListScreen> {
                         }
 
                         final m = c.items[i];
-                        final bookmarked = c.isBookmarked(m.imdbId);
-                        return ListTile(
+                        final isBookmarked = c.isBookmarked(m.imdbId);
+                        final tile = ListTile(
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => MovieDetailScreen(
@@ -138,10 +150,31 @@ class _MovieListScreenState extends State<MovieListScreen> {
                           trailing: IconButton(
                             onPressed: () => c.toggleBookmark(m),
                             icon: Icon(
-                              bookmarked ? Icons.bookmark : Icons.bookmark_outline,
+                              isBookmarked
+                                  ? CupertinoIcons.bookmark_fill
+                                  : CupertinoIcons.bookmark,
                             ),
-                            tooltip: bookmarked ? 'Unbookmark' : 'Bookmark',
+                            tooltip: isBookmarked ? 'Unbookmark' : 'Bookmark',
                           ),
+                        );
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: cs.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: cs.outlineVariant.withValues(alpha: 0.24),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: tile,
                         );
                       },
                     ),

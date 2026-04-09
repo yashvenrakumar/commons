@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,6 +36,7 @@ class MovieDetailScreen extends StatelessWidget {
           final title = detail?.title ?? titleHint ?? imdbId;
           final year = detail?.year ?? yearHint;
           final poster = detail?.poster ?? posterHint;
+          final cs = Theme.of(context).colorScheme;
           return Scaffold(
             appBar: AppBar(
               title: Text(title),
@@ -43,49 +47,85 @@ class MovieDetailScreen extends StatelessWidget {
                     posterUrl: poster,
                     year: year,
                   ),
-                  icon: Icon(c.bookmarked ? Icons.bookmark : Icons.bookmark_outline),
+                  icon: Icon(
+                    c.bookmarked ? CupertinoIcons.bookmark_fill : CupertinoIcons.bookmark,
+                  ),
                   tooltip: c.bookmarked ? 'Unbookmark' : 'Bookmark',
                 ),
               ],
             ),
             body: SafeArea(
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
                 children: [
                   if (c.reconnecting)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 10),
                       child: _ReconnectingInline(),
                     ),
-                  _HeroPoster(url: poster),
-                  const SizedBox(height: 14),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cs.surface.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.26)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _HeroPoster(url: poster),
+                              const SizedBox(height: 14),
+                              Text(
+                                title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              if (year != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  year,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              if (c.loading && detail == null)
+                                const Center(child: CircularProgressIndicator.adaptive())
+                              else if (c.error != null)
+                                Text(
+                                  c.error!,
+                                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                                )
+                              else if (detail != null) ...[
+                                Text(
+                                  detail.plot,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: cs.primary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    'Released: ${detail.released}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  if (year != null) ...[
-                    const SizedBox(height: 4),
-                    Text(year, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                  const SizedBox(height: 12),
-                  if (c.loading && detail == null)
-                    const Center(child: CircularProgressIndicator.adaptive())
-                  else if (c.error != null)
-                    Text(
-                      c.error!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    )
-                  else if (detail != null) ...[
-                    Text(
-                      detail.plot,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Released: ${detail.released}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
                 ],
               ),
             ),

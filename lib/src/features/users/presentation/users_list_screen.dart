@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -46,6 +49,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<UsersController>();
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Users'),
@@ -82,9 +86,56 @@ class _UsersListScreenState extends State<UsersListScreen> {
         onRefresh: c.refresh,
         child: ListView(
           controller: _scroll,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 22),
           children: [
-            const _SectionHeader(title: 'Local users (offline-capable)'),
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  colors: [
+                    cs.primary.withValues(alpha: 0.20),
+                    cs.secondary.withValues(alpha: 0.14),
+                  ],
+                ),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.22)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: cs.surface.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(CupertinoIcons.person_3_fill, color: cs.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Premium User Hub',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          Text(
+                            'Offline-first users + bookmarks sync',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const _SectionHeader(title: 'Local users'),
             StreamBuilder<List<AppUser>>(
               stream: c.localUsersStream,
               builder: (context, snapshot) {
@@ -110,7 +161,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
             const _SectionHeader(title: 'Remote users (reqres.in)'),
             if (c.reconnecting)
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                 child: _ReconnectingPill(),
               ),
             for (final u in c.remoteUsers)
@@ -181,14 +232,31 @@ class _LocalUserTile extends StatelessWidget {
       SyncStatus.pending => 'Pending sync',
       SyncStatus.failed => 'Sync failed (will retry)',
     };
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(
-        child: Text(user.name.isEmpty ? '?' : user.name.trim()[0].toUpperCase()),
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      title: Text(user.name),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          backgroundColor: cs.primary.withValues(alpha: 0.14),
+          child: Text(user.name.isEmpty ? '?' : user.name.trim()[0].toUpperCase()),
+        ),
+        title: Text(user.name),
+        subtitle: Text(subtitle),
+        trailing: const Icon(CupertinoIcons.chevron_right),
+      ),
     );
   }
 }
@@ -201,14 +269,30 @@ class _RemoteUserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = user.recordId.isEmpty ? user.lastName : 'ID: ${user.recordId}';
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(
-        backgroundImage: CachedNetworkImageProvider(user.avatar),
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      title: Text(user.fullName),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          backgroundImage: CachedNetworkImageProvider(user.avatar),
+        ),
+        title: Text(user.fullName),
+        subtitle: Text(subtitle),
+        trailing: const Icon(CupertinoIcons.chevron_right),
+      ),
     );
   }
 }
@@ -219,30 +303,36 @@ class _ReconnectingPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.secondary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.secondary.withValues(alpha: 0.25)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator.adaptive(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(cs.secondary),
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cs.secondary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: cs.secondary.withValues(alpha: 0.25)),
           ),
-          const SizedBox(width: 10),
-          Text(
-            'Reconnecting…',
-            style: TextStyle(color: cs.onSurface),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator.adaptive(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(cs.secondary),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Reconnecting…',
+                style: TextStyle(color: cs.onSurface),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

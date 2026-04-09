@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'app_palette.dart';
 
@@ -32,6 +33,14 @@ class AppTheme {
           borderSide: BorderSide(color: AppPalette.light().border),
         ),
       ),
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: Brightness.light,
+        primaryColor: scheme.primary,
+        scaffoldBackgroundColor: AppPalette.light().background,
+      ),
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      ),
     );
   }
 
@@ -63,6 +72,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppPalette.dark().border),
         ),
+      ),
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: Brightness.dark,
+        primaryColor: scheme.primary,
+        scaffoldBackgroundColor: AppPalette.dark().background,
+      ),
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       ),
     );
   }

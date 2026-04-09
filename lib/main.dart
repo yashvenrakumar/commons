@@ -13,7 +13,8 @@ Future<void> main() async {
   await setupServiceLocator();
   await sl<WorkmanagerSetup>().init();
 
-  final appController = AppController(themeRepo: sl())..init();
+  final appController = AppController(themeRepo: sl());
+  await appController.init();
   runApp(MyApp(appController: appController));
 }
 
