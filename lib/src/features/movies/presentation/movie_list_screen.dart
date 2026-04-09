@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/widgets/app_feedback.dart';
 import 'movie_list_controller.dart';
 import 'movie_detail_screen.dart';
 
@@ -148,7 +149,17 @@ class _MovieListScreenState extends State<MovieListScreen> {
                           title: Text(m.title),
                           subtitle: Text(m.year),
                           trailing: IconButton(
-                            onPressed: () => c.toggleBookmark(m),
+                            onPressed: () async {
+                              final added = await c.toggleBookmark(m);
+                              if (!context.mounted) return;
+                              AppFeedback.showToast(
+                                context,
+                                tone: added ? FeedbackTone.success : FeedbackTone.info,
+                                message: added
+                                    ? 'Added to bookmarks'
+                                    : 'Removed from bookmarks',
+                              );
+                            },
                             icon: Icon(
                               isBookmarked
                                   ? CupertinoIcons.bookmark_fill

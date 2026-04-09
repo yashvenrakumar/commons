@@ -10,9 +10,9 @@ class AddUserController extends ChangeNotifier {
     required UserRepository repo,
     required ConnectivityService connectivity,
     required SyncService syncService,
-  })  : _repo = repo,
-        _connectivity = connectivity,
-        _syncService = syncService;
+  }) : _repo = repo,
+       _connectivity = connectivity,
+       _syncService = syncService;
 
   final UserRepository _repo;
   final ConnectivityService _connectivity;
@@ -24,7 +24,10 @@ class AddUserController extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  Future<String?> createUser({required String name, required String job}) async {
+  Future<AddUserResult?> createUser({
+    required String name,
+    required String job,
+  }) async {
     if (_saving) return null;
     _saving = true;
     _error = null;
@@ -58,7 +61,7 @@ class AddUserController extends ChangeNotifier {
             status: SyncStatus.synced,
           );
           await _syncService.syncAllPending();
-          return localId;
+          return AddUserResult(localId: localId, queuedOffline: false);
         } catch (_) {
           await _repo.createLocalUser(
             localId: localId,
@@ -67,7 +70,7 @@ class AddUserController extends ChangeNotifier {
             createdAt: createdAt,
             status: SyncStatus.pending,
           );
-          return localId;
+          return AddUserResult(localId: localId, queuedOffline: true);
         }
       } else {
         await _repo.createLocalUser(
@@ -77,7 +80,7 @@ class AddUserController extends ChangeNotifier {
           createdAt: createdAt,
           status: SyncStatus.pending,
         );
-        return localId;
+        return AddUserResult(localId: localId, queuedOffline: true);
       }
     } catch (e) {
       _error = e.toString();
@@ -89,3 +92,9 @@ class AddUserController extends ChangeNotifier {
   }
 }
 
+class AddUserResult {
+  final String localId;
+  final bool queuedOffline;
+
+  const AddUserResult({required this.localId, required this.queuedOffline});
+}

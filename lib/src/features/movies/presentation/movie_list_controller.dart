@@ -126,9 +126,10 @@ class MovieListController extends ChangeNotifier {
     });
   }
 
-  Future<void> toggleBookmark(OmdbMovieLite m) async {
+  Future<bool> toggleBookmark(OmdbMovieLite m) async {
     if (isBookmarked(m.imdbId)) {
       await _repo.removeBookmark(userLocalId: _userLocalId, imdbId: m.imdbId);
+      return false;
     } else {
       await _repo.addBookmark(
         userLocalId: _userLocalId,
@@ -137,6 +138,7 @@ class MovieListController extends ChangeNotifier {
         posterUrl: m.poster,
         year: m.year,
       );
+      return true;
     }
   }
 

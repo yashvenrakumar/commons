@@ -86,13 +86,14 @@ class MovieDetailController extends ChangeNotifier {
     });
   }
 
-  Future<void> toggleBookmark({
+  Future<bool> toggleBookmark({
     required String title,
     required String? posterUrl,
     required String? year,
   }) async {
     if (_bookmarked) {
       await _repo.removeBookmark(userLocalId: _userLocalId, imdbId: _imdbId);
+      return false;
     } else {
       await _repo.addBookmark(
         userLocalId: _userLocalId,
@@ -101,6 +102,7 @@ class MovieDetailController extends ChangeNotifier {
         posterUrl: posterUrl,
         year: year,
       );
+      return true;
     }
   }
 

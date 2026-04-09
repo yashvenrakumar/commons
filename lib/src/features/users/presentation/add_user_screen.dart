@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/widgets/app_feedback.dart';
 import 'add_user_controller.dart';
 
 class AddUserScreen extends StatefulWidget {
@@ -110,12 +111,23 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                       ? null
                                       : () async {
                                           if (!_formKey.currentState!.validate()) return;
-                                          final id = await context.read<AddUserController>().createUser(
+                                          final result = await context.read<AddUserController>().createUser(
                                                 name: _name.text.trim(),
                                                 job: _job.text.trim(),
                                               );
                                           if (!context.mounted) return;
-                                          if (id != null) Navigator.of(context).pop();
+                                          if (result != null) {
+                                            AppFeedback.showToast(
+                                              context,
+                                              tone: result.queuedOffline
+                                                  ? FeedbackTone.warning
+                                                  : FeedbackTone.success,
+                                              message: result.queuedOffline
+                                                  ? 'Saved offline. Will sync automatically.'
+                                                  : 'User created successfully.',
+                                            );
+                                            Navigator.of(context).pop();
+                                          }
                                         },
                                   child: c.saving
                                       ? const SizedBox(

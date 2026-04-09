@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/widgets/app_feedback.dart';
 import 'movie_detail_controller.dart';
 
 class MovieDetailScreen extends StatelessWidget {
@@ -42,11 +43,21 @@ class MovieDetailScreen extends StatelessWidget {
               title: Text(title),
               actions: [
                 IconButton(
-                  onPressed: () => c.toggleBookmark(
-                    title: title,
-                    posterUrl: poster,
-                    year: year,
-                  ),
+                  onPressed: () async {
+                    final added = await c.toggleBookmark(
+                      title: title,
+                      posterUrl: poster,
+                      year: year,
+                    );
+                    if (!context.mounted) return;
+                    AppFeedback.showToast(
+                      context,
+                      tone: added ? FeedbackTone.success : FeedbackTone.info,
+                      message: added
+                          ? 'Bookmarked for this user'
+                          : 'Bookmark removed',
+                    );
+                  },
                   icon: Icon(
                     c.bookmarked ? CupertinoIcons.bookmark_fill : CupertinoIcons.bookmark,
                   ),
