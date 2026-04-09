@@ -111,7 +111,13 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         color: cs.surface.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(13),
                       ),
-                      child: Icon(CupertinoIcons.person_3_fill, color: cs.primary),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: Image.asset(
+                          'assets/branding/platformcommons_logo.jpeg',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
