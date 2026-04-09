@@ -1,70 +1,296 @@
-# Assignment App (Flutter)
+# Assignment App
 
-Implements the provided Flutter assignment:
+Production-style Flutter implementation of the assignment requirements with offline-first behavior, resilient networking, background sync, and a premium UI layer.
 
-- Paginated **User List** from `reqres.in`
-- **Create User** with **offline-first** support (persisted in SQLite via Drift)
-- **Movie List** (paginated) + **Movie Detail** using **OMDb**
-- **Offline Bookmarking** of movies, explicitly linked to a selected user (works fully offline)
-- **Background sync** using **Workmanager** when connectivity returns
-- **Network resilience**: 30% random GET failures + silent exponential-backoff retries + subtle “Reconnecting…” indicators
-- **Provider** for state management, **get_it** for dependency injection
-- **Light/Dark themes** implemented from the provided color palette, with a theme switcher
+## 1) Executive Summary
 
-## APIs
+This application delivers:
 
-- **Users (ReqRes)**: `https://reqres.in/api/users?page={page}`, `POST https://reqres.in/api/users`
-- **Movies (OMDb)**:
-  - Search: `https://www.omdbapi.com/?s={query}&page={page}&apikey=...`
-  - Detail: `https://www.omdbapi.com/?i={imdbId}&apikey=...`
+- Paginated **User List** fetched from ReqRes Collections API
+- **Create User** flow with online POST + offline persistence fallback
+- Automatic **background sync** for pending user records via Workmanager
+- Paginated **Movie List** + **Movie Detail** using OMDb API
+- Per-user **offline bookmarks** with relationship integrity
+- Fault-tolerant networking using simulated flaky GET behavior + retry/backoff
+- Theme system supporting **Light/Dark** modes from a custom palette
 
-OMDb API key is configured in:
+Core technology stack:
 
-- `lib/src/core/constants/app_constants.dart` (`omdbApiKey`)
+- State management: `provider`
+- Dependency injection: `get_it`
+- Networking: `http`
+- Local storage: `drift` (SQLite)
+- Offline sync trigger: `workmanager`
+- Connectivity awareness: `connectivity_plus`
+- Image caching: `cached_network_image`
 
-## Architecture / Folder structure
+---
 
-- `lib/src/core/`
-  - `db/` Drift SQLite database + tables (users, bookmarks, settings)
-  - `di/` get_it registrations
-  - `network/` flaky interceptor + retry/backoff helper
-  - `sync/` Workmanager dispatcher + sync service
-  - `system/` connectivity + theme settings (stored in SQLite)
-  - `theme/` light/dark Material 3 themes from palette
-- `lib/src/features/`
-  - `app/` app-level controller (theme mode)
-  - `users/` reqres API + repository + screens/controllers
-  - `movies/` omdb API + repository + screens/controllers
+## 2) Feature and Functionality Documentation
 
-## Notes / Assumptions
+## 2.1 User List Screen
 
-- OMDb is used as the “Alternative Movie API” from the assignment (TMDB not required).
-- The assignment asks to sync movie bookmarks “to the server”, but OMDb does not provide a bookmark-write API.
-  - This app guarantees **no data loss** and **correct user↔bookmark relationships** offline.
-  - On connectivity restoration, Workmanager runs a sync job that ensures pending local users are posted to ReqRes and local bookmarks are marked synced once the user has a remote id.
+**Functional scope**
 
-## Run
+- Fetches remote users from ReqRes Collections API
+- Displays:
+  - First name
+  - Last name
+  - Avatar
+- Supports infinite pagination
+- Tapping any user navigates to Movie List screen with selected user context
+
+**Endpoints used**
+
+- `GET https://reqres.in/api/collections/demo/records?project_id=10659&page={page}&limit=10`
+
+**Headers**
+
+- `x-api-key: <key>`
+- `X-Reqres-Env: prod`
+
+**Behavior notes**
+
+- Local users and remote users are shown as separate sections
+- UI handles transient failures with non-blocking reconnecting state
+
+## 2.2 Add User Functionality
+
+**Functional scope**
+
+- User can create a new user from dedicated form screen
+- Input fields:
+  - Name
+  - Job (mapped to last name in ReqRes collection schema)
+
+**Online behavior**
+
+- Immediately POSTs user data to ReqRes Collections API
+- Persists synced user in local SQLite store
+
+**Offline behavior**
+
+- Saves user locally with `pending` sync status
+- Schedules sync when connectivity returns
+
+**Endpoint used**
+
+- `POST https://reqres.in/api/collections/demo/records?project_id=10659`
+
+**Payload shape**
+
+```json
+{
+  "data": {
+    "avatar": "https://i.pravatar.cc/150?img=4",
+    "firstName": "<name>",
+    "lastName": "<job>"
+  }
+}
+```
+
+## 2.3 Offline and Background Sync
+
+**Functional scope**
+
+- Pending local users are synced in background
+- Sync is triggered by:
+  - App startup (eager sync)
+  - Connectivity restore events
+  - Workmanager job execution
+
+**Data consistency behavior**
+
+- Local sync status transitions: `pending -> synced` (or `failed` with retry path)
+- User identity relationship is preserved for bookmarks tied to local user IDs
+
+## 2.4 Movie List Screen
+
+**Functional scope**
+
+- Search-driven paginated movie list using OMDb
+- Displays poster, title, year
+- Infinite scroll pagination
+- Tap on movie opens Movie Detail screen
+- Bookmark/unbookmark directly from list
+
+**Endpoint used**
+
+- `GET https://www.omdbapi.com/?apikey=<key>&s={query}&page={page}`
+
+## 2.5 Movie Detail Screen
+
+**Functional scope**
+
+- Fetches movie detail by IMDB ID
+- Displays:
+  - Title
+  - Plot/description
+  - Release date
+  - Poster
+- Bookmark/unbookmark from detail screen
+
+**Endpoint used**
+
+- `GET https://www.omdbapi.com/?apikey=<key>&i={imdbId}&plot=full`
+
+## 2.6 Bookmarking (Offline First)
+
+**Functional scope**
+
+- Bookmarks are linked to a specific selected user
+- Works fully offline
+- Supports scenario: create user offline -> open movies -> bookmark immediately
+
+**Storage behavior**
+
+- Bookmarks persist in local SQLite and are queryable per user
+
+## 2.7 Resilience and Error Handling
+
+**Implemented mechanisms**
+
+- Custom `FlakyHttpClient` randomly fails ~30% of GET requests
+  - Simulated `SocketException` or HTTP `500`
+- Exponential backoff retry for GET calls
+- Non-blocking UI reconnecting indicators
+- Silent retries to avoid crashy or intrusive UX
+
+---
+
+## 3) Architecture and Design
+
+Codebase follows layered feature-based architecture:
+
+- `lib/src/core`
+  - `constants`: API constants/config
+  - `db`: Drift database, schema, table access methods
+  - `di`: service registration (`get_it`)
+  - `network`: flaky client + retry logic
+  - `sync`: background sync orchestration
+  - `system`: connectivity + theme settings persistence
+  - `theme`: color palette + theme configuration
+- `lib/src/features`
+  - `app`: global app-level controller
+  - `users`: users API, repository, controllers, screens
+  - `movies`: movies API, repository, controllers, screens
+
+Design principles used:
+
+- Separation of concerns
+- Repository abstraction over data sources
+- Controller-driven UI state
+- Offline-first persistence strategy
+- Dependency inversion through DI
+
+---
+
+## 4) Data Model Overview (SQLite / Drift)
+
+Primary tables:
+
+- `app_users`
+  - local identity, optional remote identity, sync status, profile fields
+- `movie_bookmarks`
+  - bookmark records linked to `app_users.localId`
+- `app_settings`
+  - key/value app settings (theme mode, etc.)
+
+Sync statuses:
+
+- `pending`
+- `synced`
+- `failed`
+
+---
+
+## 5) API and Configuration
+
+Configured in:
+
+- `lib/src/core/constants/app_constants.dart`
+
+Contains:
+
+- OMDb API key
+- ReqRes API key
+- ReqRes environment and project ID
+- Default movie search query
+
+---
+
+## 6) Build, Run, and Release
+
+## 6.1 Install dependencies
 
 ```bash
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
+```
+
+## 6.2 Run (debug)
+
+```bash
 flutter run
 ```
 
-# assignment_app
+## 6.3 Build Android release APK
 
-A new Flutter project.
+```bash
+flutter build apk --release
+```
 
-## Getting Started
+Output:
 
-This project is a starting point for a Flutter application.
+- `build/app/outputs/flutter-apk/app-release.apk`
 
-A few resources to get you started if this is your first Flutter project:
+## 6.4 Android release networking note
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Release API calls require `INTERNET` permission in:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `android/app/src/main/AndroidManifest.xml`
+
+This is already configured.
+
+---
+
+## 7) Performance and Quality Notes
+
+Implemented optimizations include:
+
+- Deduplicated background sync scheduling
+- Reduced unnecessary controller notifications in bookmark listeners
+- Startup theme initialization before app bootstrap
+- Cached image rendering
+- Clean static analysis baseline (`flutter analyze`)
+
+---
+
+## 8) Assumptions and Constraints
+
+- OMDb is used as assignment-approved alternative movie API.
+- OMDb/ReqRes do not provide a native server-side bookmark endpoint.
+  - Therefore, bookmark durability and relationship integrity are guaranteed locally.
+  - User sync to server is handled via background process.
+
+---
+
+## 9) Test Checklist (Manual)
+
+- User list loads and paginates
+- Add user online -> appears synced
+- Add user offline -> appears pending -> syncs when online
+- Open movies from selected user
+- Movie list paginates and opens detail
+- Bookmark/unbookmark from list and detail
+- App survives simulated flaky GET failures with reconnecting states
+- Theme switching persists and applies correctly
+
+---
+
+## 10) Repository Conventions
+
+- Keep API contracts in dedicated data source classes
+- Keep UI widgets thin; business flow in controllers/repositories
+- Prefer non-blocking UX for recoverable network failures
+- Preserve offline-first behavior when extending features

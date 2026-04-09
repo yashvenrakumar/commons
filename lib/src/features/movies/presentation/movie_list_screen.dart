@@ -90,7 +90,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               minimumSize: Size.zero,
                               onPressed: () => c.setQuery(_search.text),
-                              child: const Icon(CupertinoIcons.search),
+                              child: const Icon(CupertinoIcons.arrow_right_circle),
                             ),
                           ],
                         ),
